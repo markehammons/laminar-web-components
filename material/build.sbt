@@ -17,7 +17,7 @@ githubRepository := "laminar-web-components"
 
 scalaVersion := "2.13.3"
 
-crossScalaVersions := Seq("2.12.10", "2.13.3")
+crossScalaVersions := Seq("2.12.10", "2.13.3", "3.0.2")
 
 libraryDependencies += "com.raquo" %%% "laminar" % "0.10.2"
 
