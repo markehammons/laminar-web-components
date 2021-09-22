@@ -15,15 +15,21 @@ class SBTProjectBuilder(
     version: String,
     publishTo: GitHubRepository
 ) {
-    def name = s"laminar-web-components-${col.packageName}"
+  def name = s"laminar-web-components-${col.packageName}"
 
-    def buildNpmDep(p: NpmPackage) = s"""npmDependencies in Compile += "${p.name}" -> "${p.version}""""
+  def buildNpmDep(p: NpmPackage) =
+    s"""npmDependencies in Compile += "${p.name}" -> "${p.version}""""
 
-    def getNpmDeps(comp: WebComponent): Seq[NpmPackage] = Seq(comp.npmPackage) ++ comp.subComponents.flatMap(getNpmDeps)
+  def getNpmDeps(comp: WebComponent): Seq[NpmPackage] =
+    Seq(comp.npmPackage) ++ comp.subComponents.flatMap(getNpmDeps)
 
-    def buildNPMDeps = col.components.flatMap(getNpmDeps).distinct.map(buildNpmDep).mkString("\n\n")
+  def buildNPMDeps = col.components
+    .flatMap(getNpmDeps)
+    .distinct
+    .map(buildNpmDep)
+    .mkString("\n\n")
 
-    def build = s"""
+  def build = s"""
 enablePlugins(ScalaJSPlugin)
 
 enablePlugins(ScalaJSBundlerPlugin)
@@ -31,6 +37,8 @@ enablePlugins(ScalaJSBundlerPlugin)
 name := "$name"
 
 version := "$version"
+
+val materialVersion = "0.23.0"
 
 normalizedName := "$name"
 
@@ -42,13 +50,13 @@ githubRepository := "${publishTo.repository}"
 
 scalaVersion := "2.13.3"
 
-crossScalaVersions := Seq("2.12.10", "2.13.3")
+crossScalaVersions := Seq("2.12.10", "2.13.3", "3.0.2")
 
-libraryDependencies += "com.raquo" %%% "laminar" % "0.10.2"
+libraryDependencies += "com.raquo" %%% "laminar" % "0.13.1"
 
 scalaJSUseMainModuleInitializer := true
 
-scalaJSLinkerConfig in (Compile, fastOptJS) ~= { _.withSourceMap(false) }
+scalaJSLinkerConfig in (Compile, fastLinkJS) ~= { _.withSourceMap(false) }
 
 useYarn := true
 
@@ -58,14 +66,22 @@ $buildNPMDeps
 
 def buildStylesObject(cssProperties: Seq[CSSProperty], docLink: String) = {
 
-  def decapitalize(string: String) = string.substring(0, 1).toLowerCase() + string.substring(1)
+  def decapitalize(string: String) =
+    string.substring(0, 1).toLowerCase() + string.substring(1)
 
   def buildStyleReactiveField(p: CSSProperty) = s"""
         /** ${p.description}
           *
           * $docLink
           */
-        val ${decapitalize(p.name.replaceAllLiterally("--", "").split("-").tail.map(_.capitalize).mkString)} = new ReactiveStyle(new Style("${p.name}", "${p.name}"))
+        val ${decapitalize(
+    p.name
+      .replaceAllLiterally("--", "")
+      .split("-")
+      .tail
+      .map(_.capitalize)
+      .mkString
+  )} = new ReactiveStyle(new Style("${p.name}"))
   """
 
   s"""
@@ -78,7 +94,8 @@ def buildStylesObject(cssProperties: Seq[CSSProperty], docLink: String) = {
 }
 
 class CollectionBuilder(col: WebComponentCollection, organization: String) {
-  val docLink = s"""@see <a href="${col.link}">Component Collection Documentation</a>"""
+  val docLink =
+    s"""@see <a href="${col.link}">Component Collection Documentation</a>"""
 
   def build = s"""
         /** ${col.packageName}
@@ -107,7 +124,7 @@ class CollectionBuilder(col: WebComponentCollection, organization: String) {
 
 class Builder(comp: WebComponent) {
   val objectName = comp.tag.split("-").tail.map(_.capitalize).mkString
-  val docLink    = s"""@see <a href="${comp.link}">Component Documentation</a>"""
+  val docLink = s"""@see <a href="${comp.link}">Component Documentation</a>"""
 
   def scalaType(wctype: WebComponentFieldType) =
     wctype match {
@@ -154,7 +171,12 @@ class Builder(comp: WebComponent) {
           *
           * $docLink
           */
-        val on${e.name.split(':').last.split("-").map(_.capitalize).mkString} = new EventProp[dom.Event]("${e.name}")
+        val on${e.name
+    .split(':')
+    .last
+    .split("-")
+    .map(_.capitalize)
+    .mkString} = new EventProp[dom.Event]("${e.name}")
   """
 
   def buildRawElement = s"""
@@ -203,7 +225,7 @@ class Builder(comp: WebComponent) {
           */
         def default(els: HtmlElement*): Seq[HtmlElement] = els.map(_.amend(slot := ""))
       """
-      case None                           => ""
+      case None => ""
     }
 
   def buildNamedSlot(s: NamedSlot) = s"""
